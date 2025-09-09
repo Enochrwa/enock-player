@@ -16,7 +16,7 @@ const {
   toggleFollowPlaylist,
   recordPlaylistPlay,
 } = require('../controllers/playlistController');
-const { authenticate, optionalAuth, requirePlaylistPermission } = require('../middleware/auth');
+const { ProtectRoute, optionalAuth, requirePlaylistPermission } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -58,19 +58,19 @@ const loadPlaylist = async (req, res, next) => {
 };
 
 router.get('/', optionalAuth, getAllPlaylists);
-router.get('/my-playlists', authenticate, getMyPlaylists);
+router.get('/my-playlists', ProtectRoute, getMyPlaylists);
 router.get('/trending', getTrendingPlaylists);
-router.post('/', authenticate, createPlaylist);
+router.post('/', ProtectRoute, createPlaylist);
 
 router.get('/:id', optionalAuth, loadPlaylist, getPlaylistById);
-router.put('/:id', authenticate, loadPlaylist, requirePlaylistPermission('canEdit'), updatePlaylist);
-router.delete('/:id', authenticate, loadPlaylist, deletePlaylist);
-router.post('/:id/media', authenticate, loadPlaylist, requirePlaylistPermission('canAdd'), addMediaToPlaylist);
-router.delete('/:id/media/:mediaId', authenticate, loadPlaylist, requirePlaylistPermission('canRemove'), removeMediaFromPlaylist);
-router.put('/:id/media/:mediaId/position', authenticate, loadPlaylist, requirePlaylistPermission('canReorder'), reorderMediaInPlaylist);
-router.post('/:id/collaborators', authenticate, loadPlaylist, addCollaboratorToPlaylist);
-router.delete('/:id/collaborators/:userId', authenticate, loadPlaylist, removeCollaboratorFromPlaylist);
-router.post('/:id/follow', authenticate, loadPlaylist, toggleFollowPlaylist);
+router.put('/:id', ProtectRoute, loadPlaylist, requirePlaylistPermission('canEdit'), updatePlaylist);
+router.delete('/:id', ProtectRoute, loadPlaylist, deletePlaylist);
+router.post('/:id/media', ProtectRoute, loadPlaylist, requirePlaylistPermission('canAdd'), addMediaToPlaylist);
+router.delete('/:id/media/:mediaId', ProtectRoute, loadPlaylist, requirePlaylistPermission('canRemove'), removeMediaFromPlaylist);
+router.put('/:id/media/:mediaId/position', ProtectRoute, loadPlaylist, requirePlaylistPermission('canReorder'), reorderMediaInPlaylist);
+router.post('/:id/collaborators', ProtectRoute, loadPlaylist, addCollaboratorToPlaylist);
+router.delete('/:id/collaborators/:userId', ProtectRoute, loadPlaylist, removeCollaboratorFromPlaylist);
+router.post('/:id/follow', ProtectRoute, loadPlaylist, toggleFollowPlaylist);
 router.post('/:id/play', optionalAuth, loadPlaylist, recordPlaylistPlay);
 
 module.exports = router;

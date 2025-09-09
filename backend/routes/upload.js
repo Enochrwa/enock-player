@@ -2,7 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { authenticate } = require('../middleware/auth');
+const { ProtectRoute } = require('../middleware/auth');
 const {
   uploadMedia,
   uploadAvatar,
@@ -85,9 +85,9 @@ const handleUpload = (req, res, next) => {
   });
 };
 
-router.post('/media', authenticate, handleUpload, uploadMedia);
-router.post('/avatar', authenticate, upload.single('avatar'), uploadAvatar);
-router.post('/playlist-cover', authenticate, upload.single('cover'), uploadPlaylistCover);
-router.get('/progress/:id', authenticate, getUploadProgress);
+router.post('/media', ProtectRoute, handleUpload, uploadMedia);
+router.post('/avatar', ProtectRoute, upload.single('avatar'), uploadAvatar);
+router.post('/playlist-cover', ProtectRoute, upload.single('cover'), uploadPlaylistCover);
+router.get('/progress/:id', ProtectRoute, getUploadProgress);
 
 module.exports = router;

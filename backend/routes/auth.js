@@ -9,17 +9,17 @@ const {
   toggleFavorite,
   addRecent
 } = require('../controllers/authController');
-const { authenticate } = require('../middleware/auth');
+const { ProtectRoute } = require('../middleware/auth');
 
 const router = express.Router();
 
 router.post('/register', register);
 router.post('/login', login);
-router.post('/logout', authenticate, logout);
-router.get('/me', authenticate, getMe);
-router.put('/update-profile', authenticate, updateProfile);
-router.put('/change-password', authenticate, changePassword);
-router.post('/toggle-favorite', authenticate, toggleFavorite);
-router.post('/add-recent', authenticate, addRecent);
+router.post('/logout', ProtectRoute, logout);
+router.get('/me', ProtectRoute, getMe);
+router.put('/update-profile', ProtectRoute, updateProfile);
+router.put('/change-password', ProtectRoute, changePassword);
+router.post('/toggle-favorite', ProtectRoute, toggleFavorite);
+router.post('/add-recent', ProtectRoute, addRecent);
 
 module.exports = router;

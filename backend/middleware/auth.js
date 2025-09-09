@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
 // Middleware to verify JWT token
-const authenticate = async (req, res, next) => {
+const ProtectRoute = async (req, res, next) => {
   try {
     let token;
     if (
@@ -11,7 +11,7 @@ const authenticate = async (req, res, next) => {
     ) {
       token = req.headers.authorization.split(" ")[1];
     } else if (req.cookies.token) {
-      token = req.cookies.token;
+      token = req?.cookies?.token;
     }
 
     if (!token) {
@@ -181,9 +181,9 @@ const optionalAuth = async (req, res, next) => {
 };
 
 // Generate JWT token
-const generateToken = (userId) => {
+const generateToken = (user) => {
   return jwt.sign(
-    { userId },
+    { user },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRE || '7d' }
   );
@@ -199,7 +199,7 @@ const verifyToken = (token) => {
 };
 
 module.exports = {
-  authenticate,
+  ProtectRoute,
   requirePremium,
   requireOwnership,
   requirePlaylistPermission,
