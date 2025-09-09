@@ -149,6 +149,7 @@ const UploadMedia: React.FC<UploadMediaProps> = ({ className }) => {
         description: error.response?.data?.message || error.message || "An unexpected error occurred.",
         variant: "destructive"
       });
+      console.log("Error uploading: ", error)
     } finally {
       setIsLoading(false);
     }
