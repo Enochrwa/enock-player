@@ -455,9 +455,6 @@ export const uploadAPI = {
     errors?: Array<{ filename: string; error: string }>;
   }>> => {
     const response = await api.post('/upload/media', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
       onUploadProgress: (progressEvent) => {
         if (onProgress && progressEvent.total) {
           const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
