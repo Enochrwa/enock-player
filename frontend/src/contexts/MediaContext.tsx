@@ -1,17 +1,13 @@
 
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
+import { mediaAPI, Media } from '@/services/api';
 
 export type MediaType = 'audio' | 'video';
 
-export interface MediaFile {
+export interface MediaFile extends Partial<Media> {
   id: string;
-  title: string;
-  artist?: string;
-  album?: string;
-  cover?: string;
   file: string;
-  type: MediaType;
-  duration?: number;
+  cover?: string;
 }
 
 export interface Playlist {
@@ -46,68 +42,41 @@ interface MediaContextType {
   isPlayerFullscreen: boolean;
   setPlayerFullscreen: (fullscreen: boolean) => void;
   closePlayer: () => void;
+  fetchMedia: () => Promise<void>;
 }
 
 export const MediaContext = createContext<MediaContextType | undefined>(undefined);
 
-// Sample data
-const sampleAudio: MediaFile[] = [
-  {
-    id: '1',
-    title: 'Electric Dreams',
-    artist: 'Synthwave Artist',
-    album: 'Retro Futures',
-    cover: '/placeholder.svg',
-    file: 'https://storage.googleapis.com/media-session/elephants-dream/the-wires.mp3',
-    type: 'audio',
-    duration: 214
-  },
-  {
-    id: '2',
-    title: 'Neon Twilight',
-    artist: 'Digital Rain',
-    album: 'Cyber City',
-    cover: '/placeholder.svg',
-    file: 'https://storage.googleapis.com/media-session/elephants-dream/the-wires.mp3',
-    type: 'audio',
-    duration: 187
-  }
-];
-
-const sampleVideo: MediaFile[] = [
-  {
-    id: '3',
-    title: 'Cosmic Journey',
-    artist: 'Visual Arts',
-    cover: '/placeholder.svg',
-    file: 'https://storage.googleapis.com/media-session/elephants-dream/progressive-hevc.mp4',
-    type: 'video',
-    duration: 280
-  }
-];
-
-const samplePlaylists: Playlist[] = [
-  {
-    id: 'playlist-1',
-    name: 'Favorites',
-    files: [sampleAudio[0], sampleVideo[0]]
-  },
-  {
-    id: 'playlist-2',
-    name: 'Chill Vibes',
-    files: [sampleAudio[1]]
-  }
-];
-
 export const MediaProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [files, setFiles] = useState<MediaFile[]>([...sampleAudio, ...sampleVideo]);
-  const [playlists, setPlaylists] = useState<Playlist[]>(samplePlaylists);
+  const [files, setFiles] = useState<MediaFile[]>([]);
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [currentFile, setCurrentFile] = useState<MediaFile | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolumeState] = useState(0.8);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isPlayerFullscreen, setPlayerFullscreen] = useState(false);
+
+  const fetchMedia = useCallback(async () => {
+    try {
+      const response = await mediaAPI.getMedia();
+      if (response.success && response.data?.media) {
+        const mappedFiles: MediaFile[] = response.data.media.map(mediaItem => ({
+          ...mediaItem,
+          id: mediaItem._id,
+          file: mediaItem.url,
+          cover: mediaItem.thumbnailUrl || '/placeholder.svg'
+        }));
+        setFiles(mappedFiles);
+      }
+    } catch (error) {
+      console.error("Failed to fetch media:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchMedia();
+  }, [fetchMedia]);
   
   const addFile = (file: MediaFile) => {
     setFiles(prev => [...prev, file]);
@@ -251,7 +220,8 @@ export const MediaProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     updateDuration,
     isPlayerFullscreen,
     setPlayerFullscreen,
-    closePlayer
+    closePlayer,
+    fetchMedia
   };
   
   return (

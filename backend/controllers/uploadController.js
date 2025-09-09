@@ -116,7 +116,6 @@ const uploadMedia = async (req, res) => {
           type: mediaType,
           format: uploadResult.data.format,
           fileSize: uploadResult.data.bytes,
-          filePath: file.path,
           cloudinaryId: uploadResult.data.public_id,
           url: uploadResult.data.url,
           thumbnailUrl,

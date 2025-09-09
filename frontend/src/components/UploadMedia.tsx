@@ -1,6 +1,7 @@
 
 import React, { useState, useRef } from 'react';
-import { useMedia, MediaFile, MediaType } from '@/contexts/MediaContext';
+import { useMedia, MediaType } from '@/contexts/MediaContext';
+import { uploadAPI } from '@/services/api';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,14 +9,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/components/ui/use-toast';
-import { Upload, X, FileAudio, FileVideo, Image } from 'lucide-react';
+import { Upload, X, FileAudio, FileVideo, Image, Loader2 } from 'lucide-react';
 
 interface UploadMediaProps {
   className?: string;
 }
 
 const UploadMedia: React.FC<UploadMediaProps> = ({ className }) => {
-  const { addFile } = useMedia();
+  const { fetchMedia } = useMedia();
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedCoverFile, setSelectedCoverFile] = useState<File | null>(null);
@@ -24,6 +25,7 @@ const UploadMedia: React.FC<UploadMediaProps> = ({ className }) => {
   const [album, setAlbum] = useState('');
   const [mediaType, setMediaType] = useState<MediaType>('audio');
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -86,7 +88,16 @@ const UploadMedia: React.FC<UploadMediaProps> = ({ className }) => {
     reader.readAsDataURL(file);
   };
   
-  const handleUpload = () => {
+  const resetForm = () => {
+    setSelectedFile(null);
+    setSelectedCoverFile(null);
+    setTitle('');
+    setArtist('');
+    setAlbum('');
+    setCoverPreview(null);
+  };
+
+  const handleUpload = async () => {
     if (!selectedFile) {
       toast({
         title: "No File Selected",
@@ -105,38 +116,42 @@ const UploadMedia: React.FC<UploadMediaProps> = ({ className }) => {
       return;
     }
     
-    // Create object URL for the file
-    const fileUrl = URL.createObjectURL(selectedFile);
-    let coverUrl = coverPreview || '/placeholder.svg';
+    setIsLoading(true);
     
-    if (selectedCoverFile) {
-      coverUrl = URL.createObjectURL(selectedCoverFile);
+    const formData = new FormData();
+    formData.append('media', selectedFile);
+    formData.append('title', title);
+    if (artist) formData.append('artist', artist);
+    if (album) formData.append('album', album);
+    // Note: The backend will handle the cover image upload separately if needed.
+    // This example focuses on the primary media file.
+
+    try {
+      const response = await uploadAPI.uploadMedia(formData);
+      
+      if (response.success) {
+        toast({
+          title: "File Uploaded Successfully",
+          description: `${response.data?.uploadedMedia[0].title} has been added to your library.`
+        });
+        await fetchMedia();
+        resetForm();
+      } else {
+        toast({
+          title: "Upload Failed",
+          description: response.message || "An unknown error occurred.",
+          variant: "destructive"
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Upload Error",
+        description: error.response?.data?.message || error.message || "An unexpected error occurred.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
     }
-    
-    const newFile: MediaFile = {
-      id: `file-${Date.now()}`,
-      title,
-      artist: artist || undefined,
-      album: album || undefined,
-      cover: coverUrl,
-      file: fileUrl,
-      type: mediaType
-    };
-    
-    addFile(newFile);
-    
-    toast({
-      title: "File Uploaded Successfully",
-      description: `${newFile.title} has been added to your library.`
-    });
-    
-    // Reset form
-    setSelectedFile(null);
-    setSelectedCoverFile(null);
-    setTitle('');
-    setArtist('');
-    setAlbum('');
-    setCoverPreview(null);
   };
   
   const clearSelectedFile = () => {
@@ -314,9 +329,10 @@ const UploadMedia: React.FC<UploadMediaProps> = ({ className }) => {
         <Button 
           className="w-full"
           onClick={handleUpload}
-          disabled={!selectedFile || !title}
+          disabled={!selectedFile || !title || isLoading}
         >
-          Upload
+          {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          {isLoading ? 'Uploading...' : 'Upload'}
         </Button>
       </Card>
     </div>

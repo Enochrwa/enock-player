@@ -47,10 +47,6 @@ const mediaSchema = new mongoose.Schema({
     required: [true, 'File size is required'],
     min: [0, 'File size cannot be negative']
   },
-  filePath: {
-    type: String,
-    required: [true, 'File path is required']
-  },
   cloudinaryId: {
     type: String, // Cloudinary public_id
     required: [true, 'Cloudinary ID is required']
