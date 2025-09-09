@@ -3,7 +3,6 @@ import { authAPI, User } from '../services/api';
 
 interface AuthContextType {
   user: User | null;
-  token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (identifier: string, password: string) => Promise<{ success: boolean; message?: string }>;
@@ -22,39 +21,22 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const isAuthenticated = !!user && !!token;
+  const isAuthenticated = !!user;
 
-  // Initialize auth state from localStorage
+  // Initialize auth state from cookie
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        const storedToken = localStorage.getItem('authToken');
-        const storedUser = localStorage.getItem('user');
-
-        if (storedToken && storedUser) {
-          setToken(storedToken);
-          setUser(JSON.parse(storedUser));
-
-          // Verify token and refresh user data
-          try {
-            const response = await authAPI.getProfile();
-            if (response.success && response.data) {
-              setUser(response.data.user);
-              localStorage.setItem('user', JSON.stringify(response.data.user));
-            }
-          } catch (error) {
-            // Token is invalid, clear auth state
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('user');
-            setToken(null);
-            setUser(null);
-          }
+        // Check if user is authenticated by fetching profile
+        const response = await authAPI.getProfile();
+        if (response.success && response.data) {
+          setUser(response.data.user);
         }
       } catch (error) {
-        console.error('Auth initialization error:', error);
+        // User is not authenticated
+        setUser(null);
       } finally {
         setIsLoading(false);
       }
@@ -69,12 +51,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const response = await authAPI.login({ identifier, password });
 
       if (response.success && response.data) {
-        const { user: userData, token: authToken } = response.data;
+        const { user: userData } = response.data;
         
         setUser(userData);
-        setToken(authToken);
-        
-        localStorage.setItem('authToken', authToken);
         localStorage.setItem('user', JSON.stringify(userData));
 
         return { success: true };
@@ -103,12 +82,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const response = await authAPI.register(userData);
 
       if (response.success && response.data) {
-        const { user: newUser, token: authToken } = response.data;
+        const { user: newUser } = response.data;
         
         setUser(newUser);
-        setToken(authToken);
-        
-        localStorage.setItem('authToken', authToken);
         localStorage.setItem('user', JSON.stringify(newUser));
 
         return { success: true };
@@ -133,8 +109,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error('Logout error:', error);
     } finally {
       setUser(null);
-      setToken(null);
-      localStorage.removeItem('authToken');
       localStorage.removeItem('user');
     }
   };
@@ -173,7 +147,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const value: AuthContextType = {
     user,
-    token,
     isLoading,
     isAuthenticated,
     login,

@@ -47,11 +47,12 @@ const ProtectRoute = async (req, res, next) => {
           success: false,
           message: 'Token has expired.'
         });
-      } else if (jwtError.name === 'JsonWebTokenError') {
-        return res.status(401).json({
-          success: false,
-          message: 'Invalid token.'
-        });
+      // } else if (jwtError.name === 'JsonWebTokenError') {
+      //   return res.status(401).json({
+      //     success: false,
+      //     message: 'Invalid token.'
+      //   });
+
       } else {
         throw jwtError;
       }
@@ -150,13 +151,15 @@ const requirePlaylistPermission = (permission) => {
 // Optional authentication - doesn't fail if no token
 const optionalAuth = async (req, res, next) => {
   try {
-    const authHeader = req.header('Authorization');
-    
-    if (!authHeader) {
-      return next();
+    let token;
+    if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith("Bearer")
+    ) {
+      token = req.headers.authorization.split(" ")[1];
+    } else if (req.cookies.token) {
+      token = req?.cookies?.token;
     }
-
-    const token = authHeader.replace('Bearer ', '');
     
     if (!token) {
       return next();
@@ -183,7 +186,7 @@ const optionalAuth = async (req, res, next) => {
 // Generate JWT token
 const generateToken = (user) => {
   return jwt.sign(
-    { user },
+    { userId: user._id },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRE || '7d' }
   );
