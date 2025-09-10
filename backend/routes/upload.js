@@ -1,7 +1,5 @@
 const express = require('express');
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 const { ProtectRoute } = require('../middleware/auth');
 const {
   uploadMedia,
@@ -14,29 +12,8 @@ const router = express.Router();
 
 console.log('--- Initializing upload routes ---');
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = 'uploads/temp';
-    console.log(`[Multer]: Checking/creating destination directory: ${path.resolve(uploadDir)}`);
-    try {
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-        console.log(`[Multer]: Created destination directory: ${path.resolve(uploadDir)}`);
-      }
-      cb(null, uploadDir);
-    } catch (error) {
-      console.error(`[Multer]: Error creating destination directory:`, error);
-      cb(error);
-    }
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const filename = file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname);
-    console.log(`[Multer]: Generating filename: ${filename}`);
-    cb(null, filename);
-  }
-});
+// Configure multer for memory storage
+const storage = multer.memoryStorage();
 
 // File filter function
 const fileFilter = (req, file, cb) => {

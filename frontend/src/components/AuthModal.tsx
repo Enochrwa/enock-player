@@ -57,6 +57,7 @@ export function AuthModal({
     setLoginError("");
     try {
       const result = await login({ identifier: loginIdentifier, password: loginPassword }).unwrap();
+      console.log("Login results: ", result);
       if (result.success) {
         toast({ title: "Login successful!" });
         onClose();

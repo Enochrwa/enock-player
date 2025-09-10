@@ -159,7 +159,7 @@ const logout = async (req, res) => {
       expires: new Date(Date.now() + 10 * 1000), // expire in 10 seconds
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict'
+      sameSite: 'None'
     });
 
     res.status(200).json({

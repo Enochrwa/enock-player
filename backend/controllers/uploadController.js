@@ -1,5 +1,3 @@
-const path = require('path');
-const fs = require('fs');
 const { uploadToCloudinary, uploadOptions, generateVideoThumbnail } = require('../config/cloudinary');
 const Media = require('../models/Media');
 
@@ -13,31 +11,6 @@ const getMediaType = (mimetype) => {
   if (mimetype.startsWith('image/')) return 'image';
   console.warn(`[Controller]: Unknown media type for mimetype: ${mimetype}`);
   return 'unknown';
-};
-
-// Helper function to extract metadata (placeholder)
-const extractMetadata = async (filePath, mimetype) => {
-    console.log(`[Controller]: Extracting metadata from ${filePath} (mimetype: ${mimetype})`);
-  const stats = fs.statSync(filePath);
-  return {
-    fileSize: stats.size,
-    duration: null // Placeholder value
-  };
-};
-
-// Helper function to clean up temporary files
-const cleanupTempFile = (filePath) => {
-  console.log(`[Controller]: Cleaning up temporary file: ${filePath}`);
-  try {
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-      console.log(`[Controller]: Successfully deleted temp file: ${filePath}`);
-    } else {
-        console.warn(`[Controller]: Temp file not found for cleanup: ${filePath}`);
-    }
-  } catch (error) {
-    console.error(`[Controller]: Error cleaning up temp file ${filePath}:`, error);
-  }
 };
 
 const uploadMedia = async (req, res) => {
@@ -57,7 +30,7 @@ const uploadMedia = async (req, res) => {
     const errors = [];
 
     for (const file of req.files) {
-      console.log(`[Controller]: Processing file: ${file.originalname} (temp path: ${file.path})`);
+      console.log(`[Controller]: Processing file: ${file.originalname}`);
       try {
         const mediaType = getMediaType(file.mimetype);
         
@@ -66,25 +39,19 @@ const uploadMedia = async (req, res) => {
             ? 'Use /api/upload/avatar or /api/upload/playlist-cover for images'
             : 'Unsupported file type';
           console.warn(`[Controller]: Skipping file ${file.originalname}: ${errorMsg}`);
-          cleanupTempFile(file.path);
           errors.push({ filename: file.originalname, error: errorMsg });
           continue;
         }
 
-        console.log(`[Controller]: Extracting metadata for ${file.originalname}`);
-        const metadata = await extractMetadata(file.path, file.mimetype);
-        console.log(`[Controller]: Metadata for ${file.originalname}:`, metadata);
-
         console.log(`[Controller]: Uploading ${file.originalname} to Cloudinary`);
         const cloudinaryOptions = mediaType === 'audio' ? uploadOptions.audio : uploadOptions.video;
-        const uploadResult = await uploadToCloudinary(file.path, {
+        const uploadResult = await uploadToCloudinary(file.buffer, {
           ...cloudinaryOptions,
-          public_id: `${Date.now()}-${path.parse(file.originalname).name}`
+          public_id: `${Date.now()}-${file.originalname.split('.').slice(0, -1).join('.')}`
         });
 
         if (!uploadResult.success) {
           console.error(`[Controller]: Cloudinary upload failed for ${file.originalname}:`, uploadResult.error);
-          cleanupTempFile(file.path);
           errors.push({ filename: file.originalname, error: uploadResult.error });
           continue;
         }
@@ -104,7 +71,7 @@ const uploadMedia = async (req, res) => {
 
         console.log(`[Controller]: Creating media document for ${file.originalname}`);
         const mediaData = {
-          title: req.body.title || path.parse(file.originalname).name,
+          title: req.body.title || file.originalname.split('.').slice(0, -1).join('.'),
           artist: req.body.artist || '',
           album: req.body.album || '',
           genre: req.body.genre || '',
@@ -116,7 +83,7 @@ const uploadMedia = async (req, res) => {
           cloudinaryId: uploadResult.data.public_id,
           url: uploadResult.data.url,
           thumbnailUrl,
-          metadata: { ...metadata, ...uploadResult.data },
+          metadata: { ...uploadResult.data },
           uploadedBy: req.user._id,
           isPublic: req.body.isPublic !== 'false',
           isExplicit: req.body.isExplicit === 'true',
@@ -130,11 +97,9 @@ const uploadMedia = async (req, res) => {
         console.log(`[Controller]: Media document saved for ${file.originalname} with ID: ${media._id}`);
 
         uploadedMedia.push(media);
-        cleanupTempFile(file.path);
 
       } catch (error) {
         console.error(`[Controller]: Error processing file ${file.originalname}:`, error);
-        cleanupTempFile(file.path);
         errors.push({ filename: file.originalname, error: error.message });
       }
     }
@@ -148,9 +113,6 @@ const uploadMedia = async (req, res) => {
 
   } catch (error) {
     console.error('--- Unhandled error in uploadMedia controller ---', error);
-    if (req.files) {
-      req.files.forEach(file => cleanupTempFile(file.path));
-    }
     res.status(500).json({ success: false, message: 'Server error during media upload' });
   }
 };
@@ -161,18 +123,15 @@ const uploadAvatar = async (req, res) => {
         if (!req.file) { return res.status(400).json({ success: false, message: 'No avatar file uploaded' }); }
         const mediaType = getMediaType(req.file.mimetype);
         if (mediaType !== 'image') {
-            cleanupTempFile(req.file.path);
             return res.status(400).json({ success: false, message: 'Avatar must be an image file' });
         }
-        const uploadResult = await uploadToCloudinary(req.file.path, { ...uploadOptions.avatar, public_id: `avatar-${req.user._id}-${Date.now()}` });
-        cleanupTempFile(req.file.path);
+        const uploadResult = await uploadToCloudinary(req.file.buffer, { ...uploadOptions.avatar, public_id: `avatar-${req.user._id}-${Date.now()}` });
         if (!uploadResult.success) { return res.status(400).json({ success: false, message: uploadResult.error }); }
         req.user.avatar = uploadResult.data.url;
         await req.user.save();
         res.json({ success: true, message: 'Avatar uploaded successfully', data: { avatarUrl: uploadResult.data.url } });
     } catch (error) {
         console.error('Avatar upload error:', error);
-        if (req.file) { cleanupTempFile(req.file.path); }
         res.status(500).json({ success: false, message: 'Server error during avatar upload' });
     }
 };
@@ -183,16 +142,13 @@ const uploadPlaylistCover = async (req, res) => {
         if (!req.file) { return res.status(400).json({ success: false, message: 'No cover image uploaded' }); }
         const mediaType = getMediaType(req.file.mimetype);
         if (mediaType !== 'image') {
-            cleanupTempFile(req.file.path);
             return res.status(400).json({ success: false, message: 'Cover must be an image file' });
         }
-        const uploadResult = await uploadToCloudinary(req.file.path, { ...uploadOptions.playlistCover, public_id: `playlist-cover-${Date.now()}` });
-        cleanupTempFile(req.file.path);
+        const uploadResult = await uploadToCloudinary(req.file.buffer, { ...uploadOptions.playlistCover, public_id: `playlist-cover-${Date.now()}` });
         if (!uploadResult.success) { return res.status(400).json({ success: false, message: uploadResult.error }); }
         res.json({ success: true, message: 'Playlist cover uploaded successfully', data: { coverUrl: uploadResult.data.url, cloudinaryId: uploadResult.data.public_id } });
     } catch (error) {
         console.error('Playlist cover upload error:', error);
-        if (req.file) { cleanupTempFile(req.file.path); }
         res.status(500).json({ success: false, message: 'Server error during playlist cover upload' });
     }
 };

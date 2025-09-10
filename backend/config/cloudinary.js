@@ -1,4 +1,5 @@
 const cloudinary = require('cloudinary').v2;
+const streamifier = require('streamifier');
 
 // Configure Cloudinary
 cloudinary.config({
@@ -59,31 +60,38 @@ const uploadOptions = {
   }
 };
 
-// Helper function to upload file to Cloudinary
-const uploadToCloudinary = async (filePath, options = {}) => {
-  try {
-    const result = await cloudinary.uploader.upload(filePath, options);
-    return {
-      success: true,
-      data: {
-        public_id: result.public_id,
-        url: result.secure_url,
-        format: result.format,
-        resource_type: result.resource_type,
-        bytes: result.bytes,
-        width: result.width,
-        height: result.height,
-        duration: result.duration,
-        created_at: result.created_at
+// Helper function to upload file to Cloudinary using a stream
+const uploadToCloudinary = (fileBuffer, options = {}) => {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      options,
+      (error, result) => {
+        if (error) {
+          console.error('Cloudinary upload error:', error);
+          return reject({
+            success: false,
+            error: error.message
+          });
+        }
+        resolve({
+          success: true,
+          data: {
+            public_id: result.public_id,
+            url: result.secure_url,
+            format: result.format,
+            resource_type: result.resource_type,
+            bytes: result.bytes,
+            width: result.width,
+            height: result.height,
+            duration: result.duration,
+            created_at: result.created_at
+          }
+        });
       }
-    };
-  } catch (error) {
-    console.error('Cloudinary upload error:', error);
-    return {
-      success: false,
-      error: error.message
-    };
-  }
+    );
+
+    streamifier.createReadStream(fileBuffer).pipe(uploadStream);
+  });
 };
 
 // Helper function to delete file from Cloudinary
