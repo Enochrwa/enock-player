@@ -3,28 +3,24 @@ import { User } from '@/services/api';
 
 interface AuthState {
     user: User | null;
-    token: string | null;
 }
 
 const initialState: AuthState = {
     user: null,
-    token: null,
 };
 
 const authSlice = createSlice({
     name: 'auth',
     initialState,
     reducers: {
-        setCredentials(state, action: PayloadAction<{ user: User; token: string }>) {
-            const { user, token } = action.payload;
+        setCredentials(state, action: PayloadAction<{ user: User }>) {
+            const { user } = action.payload;
             state.user = user;
-            state.token = token;
-            localStorage.setItem('tokenUser', JSON.stringify( user));
+            localStorage.setItem('user', JSON.stringify(user));
         },
         clearCredentials(state) {
             state.user = null;
-            state.token = null;
-            localStorage.removeItem('tokenUser');
+            localStorage.removeItem('user');
         },
     },
 });

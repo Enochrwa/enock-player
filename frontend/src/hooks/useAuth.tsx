@@ -1,5 +1,7 @@
 import { useState, useEffect, useContext, createContext, ReactNode } from 'react';
+import { useDispatch } from 'react-redux';
 import { authAPI, User } from '../services/api';
+import { setCredentials } from '../features/auth/authSlice';
 
 interface AuthContextType {
   user: User | null;
@@ -22,6 +24,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const dispatch = useDispatch();
 
   const isAuthenticated = !!user;
 
@@ -54,7 +57,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const { user: userData } = response.data;
         
         setUser(userData);
-        localStorage.setItem('user', JSON.stringify(userData));
+        dispatch(setCredentials({ user: userData }));
 
         return { success: true };
       } else {
@@ -85,7 +88,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const { user: newUser } = response.data;
         
         setUser(newUser);
-        localStorage.setItem('user', JSON.stringify(newUser));
+        dispatch(setCredentials({ user: newUser }));
 
         return { success: true };
       } else {

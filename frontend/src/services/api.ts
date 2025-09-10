@@ -199,7 +199,7 @@ export const authAPI = {
     email: string;
     password: string;
     confirmPassword: string;
-  }): Promise<ApiResponse<{ user: User; token: string }>> => {
+  }): Promise<ApiResponse<{ user: User }>> => {
     const response = await api.post('/auth/register', userData);
     return response.data;
   },
@@ -207,7 +207,7 @@ export const authAPI = {
   login: async (credentials: {
     identifier: string;
     password: string;
-  }): Promise<ApiResponse<{ user: User; token: string }>> => {
+  }): Promise<ApiResponse<{ user: User }>> => {
     const response = await api.post('/auth/login', credentials);
     return response.data;
   },
